@@ -11,11 +11,11 @@ void testApp::setup(){
     
     ofBackground(0, 0, 0);
     
-    ofSetVerticalSync(true);
+    //ofSetVerticalSync(true);
 	//ofEnableAlphaBlending();
     ofSetLogLevel(OF_LOG_VERBOSE);
     
-    
+    blorp.loadImage("GFX/blorp3.png");
     //Video
     video.loadMovie("/Users/fakelove/Desktop/CAPETOWNBEACH.mov");
     video.play();
@@ -44,8 +44,6 @@ void testApp::setup(){
     
     colorImg.allocate(camWidth,camHeight);
 	grayImg.allocate(camWidth,camHeight);
-    threshold = 120;
-    
     
     //FBO Stuff
     ofFbo::Settings settings;    
@@ -66,6 +64,9 @@ void testApp::setup(){
     exposure = 255;
     snapCounter = 0;
     snapSpecial=false;
+    transStart = false;
+    transFinished = false;
+    transCount = 0;
     
     FXcounter = 4;
     mysterySwitch=true;
@@ -73,24 +74,41 @@ void testApp::setup(){
     mystery2=.05;
     
     gui.setup("Panel");
-    gui.add(FXType.setup("FXType", 0, 0,4));
+    gui.add(FXType.setup("FXType", 0, 0,5));
     gui.add(mystery.setup("Mystery", 0.2, 0.0, 1.0));
     gui.add(mystery2.setup("Mystery2", 0.2, 0.0, 1.0));
     gui.add(showVid.setup("Show Video", false));
     gui.add(mysterySwitch.setup("Mystery Switch", true));
     gui.add(Blobsize.setup("Blobsize", 3,1,40));
-    gui.add(threshSlide.setup("Threshold", 120,0,255));
-    gui.add(vidPos.setup("FrameNum", 0,0,video.getTotalNumFrames()));
+    gui.add(threshSlide.setup("Threshold", 120, 0, 255));
+    gui.add(vidPos.setup("FrameNum", 0, 0, video.getTotalNumFrames()));
+    gui.add(saveToggle.setup("RENDER", false));
+    gui.add(transToggle.setup("Transition", false));
+    gui.add(transLength.setup("Trans. Length", 5,0,50));
+    gui.add(transStep.setup("Trans. Step", 0,0,20));
+    //gui.add(transStart.setup("Transition", false));
     
 }
 
 //--------------------------------------------------------------
 void testApp::update(){
     
-    if(!snapSpecial){
+    //If the transition hasnt finished, then
+    if(!transFinished){
+        transStart = transToggle;
+    }
+    
+    //If the transition hasn't finished..or if the flag is still false, then snapspecial equals the gui state
+    if(!transFinished){
+        snapSpecial=saveToggle;
+    }
+    
+    //Don't let the slider affect positioning
+    if(!snapSpecial && !transStart){
         threshold = threshSlide;
         video.setFrame(vidPos);
     }
+    
     ofSetColor(255);
     bool bNewFrame = false;
     
@@ -116,18 +134,68 @@ void testApp::update(){
 void testApp::draw(){
     ofSetRectMode(OF_RECTMODE_CORNER);
      //colorImg.draw(0,0,ofGetWidth(),0.75*ofGetWidth());
-        //video.draw(0, 0, ofGetWidth(), .75*ofGetWidth());
-    if(snapSpecial){
+     //video.draw(0, 0, ofGetWidth(), .75*ofGetWidth());
+    
+    if(snapSpecial || transStart){
         fboNew.begin();
     }
-    if((threshold==0 && snapSpecial) || showVid){
+    
+    if(((threshold==0 || threshold==1) && (snapSpecial||transStart)) || showVid){
         video.draw(0, 0, ofGetWidth(), .5625*ofGetWidth());
     }
    
     CrystalDraw(FXType);
-
     
-    if (snapSpecial && (threshCounter < exposure+1) && (snapCounter<video.getTotalNumFrames())) {
+    if (transStart) {
+        
+        fboNew.end();
+        
+        ofSetColor(255, 255, 255);
+        
+        fboNew.draw(0, 0); 
+        
+        threshold = ofMap(threshCounter, 0, exposure, 0, 255);
+        
+        if (threshCounter==transCount) {
+            cout << "Save trans: " << snapCounter <<endl;
+            fullCapture.grabScreen(0, 0, ofGetWidth(), ofGetHeight());
+            char fileName[255];
+            sprintf(fileName, "images/images_%05i.tga", snapCounter);
+            fullCapture.saveImage(fileName);
+            //sprintf(snapString, "saved %s", fileName);
+            snapCounter++; //New Frame
+            video.setFrame(vidPos+snapCounter); //Start from chosen frame
+            //snapSpecial = false;
+            
+            //Reset the FBO
+            fboNew.begin();  
+            ofClear(0, 0, 0, 0);  
+            fboNew.end();
+            threshold = 0;
+            threshCounter=0;
+            
+            transCount=transCount+transLength; //Increase the count for the next pass
+            //Stop cycle and move to regular rendering
+        }
+        
+        threshCounter++;
+        
+        if (threshCounter>253) {
+            transStart = false;
+            snapSpecial=true;
+            threshCounter=0;
+            transFinished = true;
+            snapCounter = video.getCurrentFrame();
+        }
+    }
+
+    //Store the drawins in an fbo
+    
+    if (snapSpecial 
+        && (threshCounter < exposure+1) 
+        && (snapCounter < video.getTotalNumFrames()) 
+        && !transStart) {
+        
         fboNew.end(); 
         
         ofSetColor(255, 255, 255);
@@ -138,27 +206,49 @@ void testApp::draw(){
         if (threshCounter==exposure) {
             fullCapture.grabScreen(0, 0, ofGetWidth(), ofGetHeight());
             char fileName[255];
-            sprintf(fileName, "images/images_%0.5i.tga", snapCounter);
+            sprintf(fileName, "images/images_%05i.tga", snapCounter);
             fullCapture.saveImage(fileName);
             //sprintf(snapString, "saved %s", fileName);
             snapCounter++; //New Frame
-            video.setFrame(snapCounter);
+            video.setFrame(vidPos+snapCounter); //Start from chosen frame
             //snapSpecial = false;
             fboNew.begin();  
             ofClear(0, 0, 0, 0);  
             fboNew.end();
             threshold = 120;
-            flashCounter = 255;
+            threshCounter = 0;
         }
         threshCounter++;
        // cout<<threshCounter<<endl;
         
     }
     else {
-        threshCounter = 0;
-        
+        //threshCounter = 0;
     }
-     ofSetColor(255,255,255);
+    
+    
+    
+    ofSetColor(255,255,255);
+    if(snapSpecial){
+        ofSetColor(0,50,255,50+(50*sin(ofGetElapsedTimef())));
+        ofFill();
+        ofRect(26, 430, 150, 30);
+        ofSetColor(255,255,255);
+        ofDrawBitmapString("Rendering Started!", 30,450);
+    }
+    
+    if(transStart){
+        ofSetColor(255,0,255,50+(50*sin(ofGetElapsedTimef())));
+        ofFill();
+        ofRect(26, 430, 180, 30);
+        ofSetColor(255,255,255);
+        ofDrawBitmapString("Transition Rendering!", 30,450);
+    }
+    
+    ofSetColor(255,255,255);
+    ofDrawBitmapString("Length of Transition: " +ofToString(255/(transLength+.0001)), 30,480);
+    ofDrawBitmapString("Trans toggle " +ofToString(transStart), 300,480);
+    ofDrawBitmapString("Snap Toggle " +ofToString(snapSpecial), 600,480);
     ofDrawBitmapString("Frame Num: " +ofToString(video.getCurrentFrame()), 30,500);
     ofDrawBitmapString("Total Frame Num: " +ofToString(video.getTotalNumFrames()), 30,530);
     ofDrawBitmapString("Threshold: " +ofToString(threshold), 30,560);
@@ -170,7 +260,7 @@ void testApp::draw(){
     ofNoFill();
     ofRect(30, 600,100, 50);
 
-   gui.draw();
+    gui.draw();
     
     if(snapCounter>2652 ||video.getCurrentFrame() >2651){
         ofExit(); //quit when done processing
@@ -197,7 +287,7 @@ void testApp::keyPressed(int key){
             break;
         case '0':
             FXcounter++;
-            FXcounter=FXcounter%5;
+            FXcounter=FXcounter%6;
             cout<<FXcounter<<endl;
             break;
 
@@ -342,7 +432,7 @@ void testApp::CrystalDraw(int FXType){
                 }
             }
             break;
-        case 3:
+        case 3: //
             for(int i=0; i<(int)contourFinder.blobs.size(); i++ ) {
                 //ofSetColor(color);
                 ofNoFill();
@@ -387,7 +477,7 @@ void testApp::CrystalDraw(int FXType){
                 ofEndShape();  
             }
             break;
-        case 4:
+        case 4: //Klimt
             for( int i=0; i<(int)contourFinder.blobs.size(); i++ ) {
                 for( int j=0; j<contourFinder.blobs[i].nPts; j=j+ofMap(mystery, 0, 1, 1, 80)){
                    
@@ -400,14 +490,42 @@ void testApp::CrystalDraw(int FXType){
                     //int randomRectY= ofRandom(1,ofMap(mystery2, 0, 1, 1, 80));
                      ofSetColor(colorHold.getColor(contourFinder.blobs[i].pts[j].x, contourFinder.blobs[i].pts[j].y)) ;
                     ofRect(mapPt, randomRectX,randomRectX);
+                    
                     ofNoFill();
                     ofSetLineWidth(.5);
                     ofSetColor(0, 0, 0);
                     ofRect(mapPt, randomRectX,randomRectX);
                 }
             }
-
             break;
+            
+        case 5: //3d Sphere
+            ofEnableAlphaBlending();
+            for( int i=0; i<(int)contourFinder.blobs.size(); i++ ) {
+                for( int j=0; j<contourFinder.blobs[i].nPts; j=j+ofMap(mystery, 0, 1, 1, 80)){
+                    
+                    mapPt.x=ofMap(contourFinder.blobs[i].pts[j].x,0,camWidth,0,ofGetWidth());
+                    mapPt.y=ofMap(contourFinder.blobs[i].pts[j].y,0,camHeight,0,ofGetHeight());
+                    
+                    //ofFill();
+                    int randomRectX= ofMap(threshold, 0, 255, 30, 1);//ofRandom(1,ofMap(mystery2, 0, 1, 1, 80));
+                    
+                    //int randomRectY= ofRandom(1,ofMap(mystery2, 0, 1, 1, 80));
+                    ofSetColor(colorHold.getColor(contourFinder.blobs[i].pts[j].x, contourFinder.blobs[i].pts[j].y)) ;
+                    //ofRect(mapPt, randomRectX,randomRectX);
+                    
+                    
+                    blorp.draw(mapPt, randomRectX, randomRectX);
+                   
+                    //ofNoFill();
+                    //ofSetLineWidth(.5);
+                    //ofSetColor(0, 0, 0);
+                    //ofRect(mapPt, randomRectX,randomRectX);
+                }
+            }
+            ofDisableAlphaBlending();
+            break;
+
         
     }
 }

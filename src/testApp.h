@@ -24,9 +24,10 @@ class testApp : public ofBaseApp{
         void CrystalDraw(int FXslot);
     
         ofVideoGrabber      vidGrabber;
+        ofVideoPlayer       video;
         
-        ofImage colorHold;
-        ofImage fullCapture;
+        ofImage             colorHold;
+        ofImage             fullCapture;
     
         ofxCvColorImage         colorImg;
         ofxCvGrayscaleImage     grayImg;
@@ -41,7 +42,7 @@ class testApp : public ofBaseApp{
         ofxCvGrayscaleImage     camMotionGray;
     
         int                 FXcounter;
-        int keyPress;
+        int                 keyPress;
         
         int 				threshold;
         int                 camWidth;
@@ -53,11 +54,11 @@ class testApp : public ofBaseApp{
         
         int                 ptAvg;
         int                 ptSum;
-        float                 linethick;
+        float               linethick;
         
         //Bool for taking a picture
         bool        snapPhoto;
-    int snapCounter; //How many frames!
+        int         snapCounter; //How many frames!
         //Special FBO and threshold capturer
         bool        snapSpecial;
         int         threshChange;
@@ -66,7 +67,11 @@ class testApp : public ofBaseApp{
         int         exposure; //how many steps through the threshold counter?
         int         flashCounter;
         
-        int tog;
+        bool        transFinished;
+        int         transCount;
+        bool        transStart;
+        
+        int         tog;
         
         //For DINO MODE
         ofImage     numbers[4];
@@ -78,8 +83,8 @@ class testApp : public ofBaseApp{
         int         MysteryConnect;
         int         MysteryConnect2;
         int         connectCount;
-    
-    ofVideoPlayer video;
+    //Special Icons
+    ofImage blorp;
     
     //color Switching
     float       hCycle;
@@ -89,13 +94,7 @@ class testApp : public ofBaseApp{
     //Variables from gui
     int         blurAmt;
     float       lineThick;
-    //float       mystery;
-    //float       mystery2;
     bool        addBlend;
-    //bool        mysterySwitch;
-    //bool        BWSwitch;
-    
-   // bool        backSwitch;
     bool        motionSwitch;
     
     bool        shufflin; //Everyday I'm (for randomizing app variables)
@@ -107,12 +106,16 @@ class testApp : public ofBaseApp{
 	ofxIntSlider circleResolution;
     ofxIntSlider FXType;
     ofxIntSlider Blobsize;
+    ofxIntSlider transLength;
+    ofxIntSlider transStep;
     ofxIntSlider vidPos;
     ofxToggle showVid;
 	ofxToggle mysterySwitch;
 	ofxToggle BWSwitch;
     ofxToggle backSwitch;
-	ofxButton ringButton;
+	//ofxButton ringButton;
+    ofxToggle saveToggle;
+    ofxToggle transToggle;
     
 	ofxPanel gui;
     
