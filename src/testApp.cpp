@@ -17,28 +17,13 @@ void testApp::setup(){
     
     blorp.loadImage("GFX/blorp3.png");
     //Video
-    video.loadMovie("/Users/fakelove/Desktop/CAPETOWNBEACH.mov");
+    video.loadMovie("/Users/fakelove/Desktop/Sequence 05.mov");
     video.play();
     video.setPaused(true);
     video.firstFrame();
-    /*
-    glShadeModel (GL_SMOOTH);
-
-    //initialize lighting
-    glLightfv (GL_LIGHT0, GL_POSITION, lightOnePosition);
-    glLightfv (GL_LIGHT0, GL_DIFFUSE, lightOneColor);
-    glEnable (GL_LIGHT0);
-    glLightfv (GL_LIGHT1, GL_POSITION, lightTwoPosition);
-    glLightfv (GL_LIGHT1, GL_DIFFUSE, lightTwoColor);
-    glEnable (GL_LIGHT1);
-    glEnable (GL_LIGHTING);
-    glColorMaterial (GL_FRONT_AND_BACK, GL_DIFFUSE);
-    glEnable (GL_COLOR_MATERIAL);
-    */
-    
-    
-    camWidth = 1920;
-    camHeight =1080;
+ 
+    camWidth = video.getWidth();
+    camHeight =video.getHeight();
     //vidGrabber.setVerbose(true);
     //vidGrabber.initGrabber(camWidth,camHeight);
     
@@ -61,7 +46,7 @@ void testApp::setup(){
     fboNew.end();
     threshCounter=0;
     threshold = 120;
-    exposure = 255;
+    exposure = 20;
     snapCounter = 0;
     snapSpecial=false;
     transStart = false;
@@ -77,6 +62,7 @@ void testApp::setup(){
     gui.add(FXType.setup("FXType", 0, 0,5));
     gui.add(mystery.setup("Mystery", 0.2, 0.0, 1.0));
     gui.add(mystery2.setup("Mystery2", 0.2, 0.0, 1.0));
+    gui.add(lineThick.setup("Line Thickness", 0.035, 0.0, 1));
     gui.add(showVid.setup("Show Video", false));
     gui.add(mysterySwitch.setup("Mystery Switch", true));
     gui.add(Blobsize.setup("Blobsize", 3,1,40));
@@ -88,6 +74,8 @@ void testApp::setup(){
     gui.add(transStep.setup("Trans. Step", 0,0,20));
     //gui.add(transStart.setup("Transition", false));
     
+    mainOutputSyphonServer.setName("Screen Output");
+    ofEnableSmoothing();
 }
 
 //--------------------------------------------------------------
@@ -120,6 +108,7 @@ void testApp::update(){
         /* if (snapSpecial && threshCounter < exposure+1) {
              threshCounter++;
          }*/
+    //}
         colorImg.setFromPixels(video.getPixels(), camWidth,camHeight);
         grayImg=colorImg;
         
@@ -140,8 +129,9 @@ void testApp::draw(){
         fboNew.begin();
     }
     
-    if(((threshold==0 || threshold==1) && (snapSpecial||transStart)) || showVid){
-        video.draw(0, 0, ofGetWidth(), .5625*ofGetWidth());
+    //if(((threshold==0 || threshold==1) && (snapSpecial||transStart)) || showVid){
+    if(((threshCounter==1) && (snapSpecial||transStart)) || showVid){
+        //video.draw(0, 0, ofGetWidth(), .5625*ofGetWidth());
     }
    
     CrystalDraw(FXType);
@@ -225,6 +215,7 @@ void testApp::draw(){
     else {
         //threshCounter = 0;
     }
+    	mainOutputSyphonServer.publishScreen();
     
     
     
@@ -252,6 +243,7 @@ void testApp::draw(){
     ofDrawBitmapString("Frame Num: " +ofToString(video.getCurrentFrame()), 30,500);
     ofDrawBitmapString("Total Frame Num: " +ofToString(video.getTotalNumFrames()), 30,530);
     ofDrawBitmapString("Threshold: " +ofToString(threshold), 30,560);
+    ofDrawBitmapString("Mystery2: " +ofToString((float)mystery2), 30,590);
     //ofDrawBitmapString("Current Drawing Mode: " +ofToString(FXcounter), 30,150);
     ofSetColor(255, 0, 0);
     ofFill();
@@ -263,7 +255,7 @@ void testApp::draw(){
     gui.draw();
     
     if(snapCounter>2652 ||video.getCurrentFrame() >2651){
-        ofExit(); //quit when done processing
+        //ofExit(); //quit when done processing
     }
     
 }
@@ -308,7 +300,7 @@ void testApp::CrystalDraw(int FXType){
             for( int i=0; i<(int)contourFinder.blobs.size(); i++ ) {
                  
                 ofBeginShape();
-                for( int k=0; k<contourFinder.blobs[i].nPts; k+=3){
+                for( int k=0; k<contourFinder.blobs[i].nPts; k+=2){
                     mapPt.x=ofMap(contourFinder.blobs[i].pts[k].x,0,camWidth,0,ofGetWidth());
                     mapPt.y=ofMap(contourFinder.blobs[i].pts[k].y,0,camHeight,0,ofGetHeight());
                     ofVertex( mapPt.x, mapPt.y );
@@ -432,27 +424,29 @@ void testApp::CrystalDraw(int FXType){
                 }
             }
             break;
-        case 3: //
+        case 3: //LINE DRAWIN
+            //ofPushStyle();
             for(int i=0; i<(int)contourFinder.blobs.size(); i++ ) {
-                //ofSetColor(color);
+                ofSetColor(color);
                 ofNoFill();
                 ofBeginShape();
-                for( int j=0; j<contourFinder.blobs[i].nPts; j=j+ofMap(mystery, 0, 1, 1, 20) ) {
+                for( int j=0; j<contourFinder.blobs[i].nPts; j=j+ofMap(mystery, 0, 1, 1, 50)) {
                     mapPt.x=ofMap(contourFinder.blobs[i].pts[j].x,0,camWidth,0,ofGetWidth());
                     mapPt.y=ofMap(contourFinder.blobs[i].pts[j].y,0,camHeight,0,ofGetHeight());
                     ofVertex(mapPt);
                     
                     //Draw connections to center - OPTIONAL
                     //ofSetLineWidth(ofMap(connectDist [i][j], 0, 300, .1, 7));
+                    color.set(colorHold.getColor(contourFinder.blobs[i].pts[j].x, contourFinder.blobs[i].pts[j].y));
+                    ofSetColor(color);
+
                     if(mysterySwitch){
                         mapCent.x = ofMap(contourFinder.blobs[i].centroid.x,0,camWidth,0,ofGetWidth());
                         mapCent.y = ofMap(contourFinder.blobs[i].centroid.y,0,camHeight,0,ofGetHeight());
                         int centDist;
                         centDist = ofDist(mapPt.x,mapPt.y, mapCent.x,mapCent.y);
                         ofSetLineWidth(ofMap(centDist, 0, 400, .03, 2.5));
-                        color.set(colorHold.getColor(contourFinder.blobs[i].pts[j].x, contourFinder.blobs[i].pts[j].y));
-                        ofSetColor(color);
-                        ofLine(mapPt.x,
+                                                ofLine(mapPt.x,
                                mapPt.y,
                                mapCent.x,
                                mapCent.y
@@ -464,18 +458,23 @@ void testApp::CrystalDraw(int FXType){
                 if (mystery2>0) {    
                     ofSetLineWidth(ofMap(lineThick, 0.0, 1.0, 0.0, 3.0));
                     for (int k = 1; k<ofMap(mystery2, 0.0, 1.0, 1, 30); k++) {
-                        //color.setHsb(i*k*7, 255, 255);
-                        ofSetColor(color);
+                        //color.setBrightness(k/mystery2);
+                        //ofSetColor(color);
                         for( int j=0; j<contourFinder.blobs[i].nPts; j+=k*4 ) {
                             mapPt.x=ofMap(contourFinder.blobs[i].pts[j].x,0,camWidth,0,ofGetWidth());
                             mapPt.y=ofMap(contourFinder.blobs[i].pts[j].y,0,camHeight,0,ofGetHeight());
                             ofVertex( mapPt.x, mapPt.y );
+                            
+                            //ofVertex( mapPt.x+ofRandom(3), mapPt.y+ofRandom(3) );
+                            //ofVertex( mapPt.x-ofRandom(3), mapPt.y-ofRandom(3) );
                         }
                     }
                 }
+                ofSetColor(color);
                 ofSetLineWidth(ofMap(lineThick, 0.0, 1.0, 0.0, 10.0));
                 ofEndShape();  
             }
+            //ofPopStyle();
             break;
         case 4: //Klimt
             for( int i=0; i<(int)contourFinder.blobs.size(); i++ ) {
@@ -508,12 +507,11 @@ void testApp::CrystalDraw(int FXType){
                     mapPt.y=ofMap(contourFinder.blobs[i].pts[j].y,0,camHeight,0,ofGetHeight());
                     
                     //ofFill();
-                    int randomRectX= ofMap(threshold, 0, 255, 30, 1);//ofRandom(1,ofMap(mystery2, 0, 1, 1, 80));
+                    int randomRectX= ofMap(threshold, 0, 255, 80, 1);//ofRandom(1,ofMap(mystery2, 0, 1, 1, 80));
                     
                     //int randomRectY= ofRandom(1,ofMap(mystery2, 0, 1, 1, 80));
                     ofSetColor(colorHold.getColor(contourFinder.blobs[i].pts[j].x, contourFinder.blobs[i].pts[j].y)) ;
                     //ofRect(mapPt, randomRectX,randomRectX);
-                    
                     
                     blorp.draw(mapPt, randomRectX, randomRectX);
                    

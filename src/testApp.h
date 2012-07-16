@@ -4,6 +4,7 @@
 #include "ofxOpenCv.h"
 #include "DrawingModes.h"
 #include "ofxGui.h"
+#include "ofxSyphon.h"
 
 class testApp : public ofBaseApp{
 
@@ -54,7 +55,6 @@ class testApp : public ofBaseApp{
         
         int                 ptAvg;
         int                 ptSum;
-        float               linethick;
         
         //Bool for taking a picture
         bool        snapPhoto;
@@ -93,7 +93,6 @@ class testApp : public ofBaseApp{
     
     //Variables from gui
     int         blurAmt;
-    float       lineThick;
     bool        addBlend;
     bool        motionSwitch;
     
@@ -102,6 +101,7 @@ class testApp : public ofBaseApp{
     //GUIGUIGUIGUIGUIGUIGUIGUIGUIGUIGUIGUI
     ofxFloatSlider mystery;
 	ofxFloatSlider mystery2;
+    ofxFloatSlider lineThick;
     ofxIntSlider threshSlide;
 	ofxIntSlider circleResolution;
     ofxIntSlider FXType;
@@ -118,6 +118,9 @@ class testApp : public ofBaseApp{
     ofxToggle transToggle;
     
 	ofxPanel gui;
+    
+    //ofxSyphon
+    ofxSyphonServer mainOutputSyphonServer;
     
 		
 };
